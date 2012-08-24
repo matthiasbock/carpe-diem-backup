@@ -2,18 +2,17 @@
 # -*- coding: iso-8859-15 -*-
 
 from sys import argv
-from mount import *
 from subprocess import Popen, PIPE
 from shlex import split
 from mailer import MailTransport, Email
 
-target = argv[len(argv)-1]
-
-umount(target)
-mount(target)
-files = Popen(split('find "'+target+'" -name "*.exe"'), stdout=PIPE).communicate()[1].strip()
+files = Popen(split('find "'+argv[1]+'" -name "*.exe"'), stdout=PIPE).communicate()[0].strip()
 open('exe.list','w').write(files)
 files = files.split('\n')
+for i in range(len(files)):
+	if files[i] == '':
+		files.pop(i)
+
 log = ''
 while len(files) > 0:
 	p1 = scan(files.pop())
@@ -28,5 +27,5 @@ while len(files) > 0:
 	print result
 	log += result
 
-Email(From='Kafka <carpediemd27@web.de>', To='matthias.bock@hu-berlin.de', Subject='Virenscan', Text=log).send( MailTransport(Account='carpediemd27@web.de') )
+Email(From='Kafka <carpediemd27@web.de>', To='cadibe-it@googlegroups.com', Subject='Ergebnisse Viren-Scan', Text=log).send( MailTransport(Account='carpediemd27@web.de') )
 
