@@ -4,7 +4,7 @@
 from subprocess import Popen, PIPE
 from shlex import split
 
-def resolve(find_ether):
+def ether2ip(find_ether):
 	from utils import between
 	find_ether = find_ether.upper()
 	netmask = '192.168.3'
@@ -18,6 +18,17 @@ def resolve(find_ether):
 				return ip
 	return None
 
-if __name__ == '__main__':
-	print resolve('00:1d:19:b5:06:d0')
+def update_fstab(ip, smbname):
+	fstab = open('/etc/fstab').read()
+	
+ethers = open('/etc/ethers').read()
+
+for line in ethers.split('\n'):
+	if len(line) > 6*2+5+2 and '\t' in line:
+		s = line.split('\t')
+		ether = s[0]
+		smbname = s[1]
+		ip = ether2ip(ether)
+		update_fstab(ip, smbname)
+		print smbname+' is at '+ip
 
