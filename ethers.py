@@ -1,6 +1,11 @@
 #!/usr/bin/python
 # -*- coding: iso-8859-15 -*-
 
+#
+# reads all mac addresses in /etc/ethers
+# and adds/updates the corresponding hostnames (smbhostnames) to/in hosts
+#
+
 from subprocess import Popen, PIPE
 from shlex import split
 
@@ -18,17 +23,30 @@ def ether2ip(find_ether):
 				return ip
 	return None
 
-def update_fstab(ip, smbname):
-	fstab = open('/etc/fstab').read()
+def update_hosts(ip, smbname):
+	hosts = open('/etc/hosts').read().split('\n')
+	found = False
+	for i in range(len(hosts)):
+		if smbname.upper() in hosts[i].upper():
+			hosts[i] = ip+'\t'+smbname
+			found = True
+			break
+	hosts = '\n'.join(hosts)
+	if not found:
+		hosts += '\n'+ip+'\t'+smbname
+	open('/etc/hosts', 'w').write(hosts)
 	
 ethers = open('/etc/ethers').read()
 
 for line in ethers.split('\n'):
-	if len(line) > 6*2+5+2 and '\t' in line:
+	if len(line) > 6*2+5+1 and '\t' in line:
 		s = line.split('\t')
 		ether = s[0]
 		smbname = s[1]
 		ip = ether2ip(ether)
-		update_fstab(ip, smbname)
-		print smbname+' is at '+ip
+		if ip is not None:
+			update_hosts(ip, smbname)
+			print smbname+' is at '+ip
+		else:
+			print 'could not resolve '+ether+' ('+smbname+')'
 
