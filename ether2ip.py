@@ -4,19 +4,20 @@
 from subprocess import Popen, PIPE
 from shlex import split
 
-def resolve(find_ether):	# string of 6 chars
+def resolve(find_ether):
 	from utils import between
+	find_ether = find_ether.upper()
 	netmask = '192.168.3'
 	reply = Popen(split('nmap -sP '+netmask+'.1-245'), stdout=PIPE).communicate()[0]
 	for line in reply.split('\n'):
 		if 'appears to be up' in line:
-			ip = ''.join([chr(int(e)) for e in between(line, '(', ')').split('.')])
+			ip = between(line, '(', ')')
 		elif 'MAC Address:' in line:
-			ether = ''.join([chr(int(e,16)) for e in between(line, ': ', ' ').split(':')])
-			if ether == find_ether:
-				return ip	# returns string of 4 chars
+			ether = between(line, ': ', ' ')
+			if ether.upper() == find_ether:
+				return ip
+	return None
 
 if __name__ == '__main__':
-	from utils import ip2str
-	print ip2str( resolve('\x00\x1d\x19\xb5\x06\xd0') )
+	print resolve('00:1d:19:b5:06:d0')
 
