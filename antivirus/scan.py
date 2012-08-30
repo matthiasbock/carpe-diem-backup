@@ -25,6 +25,7 @@ def sendmail(log):
 	Email(From='Kafka <carpediemd27@web.de>', To='cadibe-it@googlegroups.com', Subject='clamscan @ Kafka: FOUND', Text=log).send( MailTransport(Account='carpediemd27@web.de') )
 
 log = ''
+found = False
 while len(files) > 0:
 	p1 = scan(files.pop())
 	p2 = None
@@ -34,12 +35,14 @@ while len(files) > 0:
 	result = p1.communicate()[0].strip()
 	print result
 	if 'FOUND' in result:
+		found = True
 		log += result+'\n'
 	if p2 != None:
 		p2.wait()
 		result = p2.communicate()[0].strip()
 		print result
 		if 'FOUND' in result:
+			found = True
 			log += result+'\n'
 	if len(log) > 5000:
 		sendmail(log)
@@ -48,3 +51,5 @@ while len(files) > 0:
 if log != '':
 	sendmail(log)
 
+if not found:
+	Email(From='Kafka <carpediemd27@web.de>', To='cadibe-it@googlegroups.com', Subject='clamscan @ Kafka: clean', Text=argv[1]).send( MailTransport(Account='carpediemd27@web.de') )
