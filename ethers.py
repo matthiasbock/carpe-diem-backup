@@ -8,11 +8,15 @@
 
 from subprocess import Popen, PIPE
 from shlex import split
+from utils import between
+
+def getIP():
+	output = Popen(['ifconfig'], stdout=PIPE).communicate()[0]
+	return between( between(output, 'eth0', '\n\n'), 	'inet addr:', ' ' )
 
 def ether2ip(find_ether):
-	from utils import between
 	find_ether = find_ether.upper()
-	netmask = '192.168.3'
+	netmask = '.'.join( getIP().split('.')[0:3] )
 	reply = Popen(split('nmap -sP '+netmask+'.1-245'), stdout=PIPE).communicate()[0]
 	for line in reply.split('\n'):
 		if 'appears to be up' in line:
