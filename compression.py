@@ -4,6 +4,7 @@
 import os
 from subprocess import Popen, PIPE
 from shlex import split
+from os import chdir
 
 def du(folder):
 	cmd = 'du -sb "'+folder+'"'
@@ -16,16 +17,37 @@ def du(folder):
 		s = 0
 	return s
 
-def tar_bzip(folder):
+def name_without_path(folder):
 	s = folder.split('/')
-	folder = '/'.join(s[:-1])
-	name = s[len(s)-1]
+	return s[len(s)-1]
+
+def getpath(folder):
+	s = folder.split('/')
+	return '/'.join(s[:-1])
+
+def tar_bzip(folder):
+	name = name_without_path(folder)
 	filename = name+'.tar.bz'
-	from os import chdir
-	chdir(folder)
+	chdir( getpath(folder) )
 	Popen(split('/bin/tar --remove-files -cjf '+filename+' '+name)).wait()
-#	if name != '' and (not '*' in name):
-#		Popen(split('rm -R '+name)).wait()
+	chdir('/home/code/carpe-diem-backup')
+	return filename
+
+#
+# requires p7zip-full to be installed
+#
+
+def sevenzip(folder):
+	name = name_without_path(folder)
+	filename = name+'.7z'
+	path = getpath(folder)
+#	print path
+	chdir(path)
+	cmd = '7za a '+filename+' '+name
+#	print cmd
+	exitstatus = Popen(split(cmd)).wait()
+	if exitstatus == 0 and name != '' and (not '*' in name):	# remove
+		Popen(split('rm -R '+name)).wait()
 	chdir('/home/code/carpe-diem-backup')
 	return filename
 

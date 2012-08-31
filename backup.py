@@ -97,6 +97,13 @@ for job in BackupJobs:
 					sleep(5) # give it some time to complete the network transfer!
 					compressedsize = str(du(cname))+' '+cname
 					print '\t'+compressedsize
+				elif job['compress'] == '7z':
+					print '\tCompressing ...'
+					filename = sevenzip(job['target'])
+					cname = job['target']+'.7z'
+					sleep(5) # give it some time to complete the network transfer!
+					compressedsize = str(du(cname))+' '+cname
+					print '\t'+compressedsize
 				else:
 					print 'Warning: Skipping unsupported compression method "'+job['compress']+'"'
 
@@ -113,6 +120,7 @@ for job in BackupJobs:
 			message = 'Runtime: '+runtime
 			message += '\nBackup size: '+str(backupsize)
 			if compressedsize != backupsize:
+				message += '\nCompressed using '+job['compress']
 				message += '\nCompressed size: '+str(compressedsize)
 
 			Email(From='Kafka <carpediemd27@web.de>', To='cadibe-it@googlegroups.com', Subject='Backup erstellt: '+job['section'], Text=message).send( MailTransport(Account='carpediemd27@web.de') )
