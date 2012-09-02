@@ -66,9 +66,10 @@ for job in BackupJobs:
 		if not backup_present( job['target'] ):
 
 			#
-			# backup part
+			# copy part
 			#
 
+			log = ''
 			t = job['target'].split('/')
 			parent = '/'.join(t[:len(t)-1])
 			print '\tchecking for target\'s parent folder '+parent+' ...'
@@ -82,7 +83,7 @@ for job in BackupJobs:
 			print '\tdone.'
 			sleep(10) # give it some time to complete the network transfer!
 
-			# unmount source and target drives
+			# unmount source
 
 			umount_if_necessary( job['mount_source'] )
 			print '\tsource unmounted.'
@@ -117,7 +118,7 @@ for job in BackupJobs:
 				else:
 					print 'Warning: Skipping unsupported compression method "'+job['compress']+'"'
 
-			# unmount
+			# unmount target
 
 			umount_if_necessary( job['mount_target'] )
 			print '\ttarget unmounted.'
@@ -131,18 +132,17 @@ for job in BackupJobs:
 
 			# send a mail to the admin
 
+			log += 'Backup size: '+str(backupsize)+'\n'
+			if compressedsize != backupsize:
+				log += 'Compressed using: '+job['compression']+'\n'
+				log += 'Compressed size: '+str(compressedsize)+'\n'
+
 			stop = datetime.now()
 			runtime = str(stop-start)
-			print 'Script runtime: '
-			print runtime
+			print 'Script runtime: '+runtime
+			log += 'Runtime: '+runtime+'\n'
 
-			message = 'Runtime: '+runtime
-			message += '\nBackup size: '+str(backupsize)
-			if compressedsize != backupsize:
-				message += '\nCompressed using: '+job['compression']
-				message += '\nCompressed size: '+str(compressedsize)
-
-			Email(From='Kafka <carpediemd27@web.de>', To='cadibe-it@googlegroups.com', Subject='Backup erstellt: '+job['section'], Text=message).send( MailTransport(Account='carpediemd27@web.de') )
+			Email(From='Kafka <carpediemd27@web.de>', To='cadibe-it@googlegroups.com', Subject='Backup erstellt: '+job['section'], Text=log).send( MailTransport(Account='carpediemd27@web.de') )
 		else:
 			print '\tBackup found. Skipping.'
 	else:
