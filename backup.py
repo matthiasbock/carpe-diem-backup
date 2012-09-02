@@ -11,6 +11,7 @@ from subprocess import Popen, PIPE
 from shlex import split
 
 from compression import *
+from encryption import *
 from mailer import MailTransport, Email
 from mount import mount, umount
 
@@ -45,7 +46,7 @@ sections = parser.sections()
 BackupJobs = []
 for section in sections:
 	d = {'section':section}
-	for key in ['mount_source', 'source', 'mount_target', 'target', 'compress']:
+	for key in ['mount_source', 'source', 'mount_target', 'target', 'compression', 'encryption']:
 		try:
 			d[key] = parser.get(section, key).replace('{{today}}', today).rstrip('/')
 		except NoOptionError:
@@ -63,17 +64,21 @@ for job in BackupJobs:
 	print '\tmounting '+job['mount_source']+' and '+job['mount_target']+' ...'
 	if mount_if_necessary( job['mount_source'] ) and mount_if_necessary( job['mount_target'] ):
 		if not backup_present( job['target'] ):
+
+			#
+			# backup part
+			#
+
 			t = job['target'].split('/')
 			parent = '/'.join(t[:len(t)-1])
-			print '\tcreating target parent '+parent+' ...'
+			print '\tchecking for target\'s parent folder '+parent+' ...'
 			Popen(split('mkdir -p '+parent)).wait()
-			Popen(split('mkdir -p /var/log/backups')).wait()
 
 			# copy data
 
 			cmd = 'cp -a "'+job['source']+'" "'+job['target']+'"'
 			print '\t'+cmd
-			open('/var/log/backups/'+today+'-'+job['section']+'.log', 'w').write(Popen(split(cmd), stdout=PIPE, stderr=PIPE).communicate()[0])
+			Popen(split(cmd), stdout=PIPE, stderr=PIPE).wait()
 			print '\tdone.'
 			sleep(10) # give it some time to complete the network transfer!
 
@@ -88,16 +93,21 @@ for job in BackupJobs:
 				continue
 			backupsize = str(bsize)+' '+job['target']
 			print '\t\t'+backupsize
+
+			#
+			# compression part
+			#
+
 			compressedsize = backupsize
-			if 'compress' in job.keys():
-				if job['compress'] == 'tar.bz':
+			if 'compression' in job.keys():
+				if job['compression'] == 'tar.bz':
 					print '\tCompressing ...'
 					filename = tar_bzip(job['target'])
 					cname = job['target']+'.tar.bz'
 					sleep(5) # give it some time to complete the network transfer!
 					compressedsize = str(du(cname))+' '+cname
 					print '\t'+compressedsize
-				elif job['compress'] == '7z':
+				elif job['compression'] == '7z':
 					print '\tCompressing ...'
 					filename = sevenzip(job['target'])
 					cname = job['target']+'.7z'
@@ -107,8 +117,17 @@ for job in BackupJobs:
 				else:
 					print 'Warning: Skipping unsupported compression method "'+job['compress']+'"'
 
+			# unmount
+
 			umount_if_necessary( job['mount_target'] )
 			print '\ttarget unmounted.'
+
+			#
+			# encryption part
+			#
+
+			if 'encryption' in job.keys():
+				filename = encrypt(filename, recipient = job['encryption'])
 
 			# send a mail to the admin
 
@@ -120,7 +139,7 @@ for job in BackupJobs:
 			message = 'Runtime: '+runtime
 			message += '\nBackup size: '+str(backupsize)
 			if compressedsize != backupsize:
-				message += '\nCompressed using '+job['compress']
+				message += '\nCompressed using: '+job['compression']
 				message += '\nCompressed size: '+str(compressedsize)
 
 			Email(From='Kafka <carpediemd27@web.de>', To='cadibe-it@googlegroups.com', Subject='Backup erstellt: '+job['section'], Text=message).send( MailTransport(Account='carpediemd27@web.de') )
