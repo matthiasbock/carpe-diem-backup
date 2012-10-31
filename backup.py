@@ -142,7 +142,7 @@ for job in BackupJobs:
 			print 'Script runtime: '+runtime
 			log += 'Runtime: '+runtime+'\n'
 
-			Email(From='Kafka <carpediemd27@web.de>', To='cadibe-it@googlegroups.com', Subject='Backup erstellt: '+job['section'], Text=log).send( MailTransport(Account='carpediemd27@web.de') )
+			Email(To='cadibe-it@googlegroups.com', Subject='Backup erstellt: '+job['section'], Text=log).send( MailTransport() )
 		else:
 			print '\tBackup found. Skipping.'
 	else:
