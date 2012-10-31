@@ -18,6 +18,10 @@ print ip
 
 # compare
 if ip != expected_ip:
+	print 'ip has changed. informing admins ...'
+
 	# notify admins about the change
 	from mailer import MailTransport, Email
-	Email(To='cadibe-it@googlegroups.com', Subject='IP-Adresse hat sich unerwartet geändert', Text='Neue IP-Adresse: '+ip+'\nErwartet war: '+expected_ip).send(MailTransport())
+	Email(To=parser.get('expected', 'mailto'), Subject='IP-Adresse hat sich unerwartet geaendert', Text='Neue IP-Adresse: '+ip+'\nErwartet war: '+expected_ip).send(MailTransport())
+else:
+	print 'ok'

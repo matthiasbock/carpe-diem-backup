@@ -42,6 +42,8 @@ if not os.path.exists(conf):
 
 parser = RawConfigParser()
 parser.read(conf)
+mailto = parser.read('logs', 'mailto')
+
 sections = parser.sections()
 BackupJobs = []
 for section in sections:
@@ -142,7 +144,7 @@ for job in BackupJobs:
 			print 'Script runtime: '+runtime
 			log += 'Runtime: '+runtime+'\n'
 
-			Email(To='cadibe-it@googlegroups.com', Subject='Backup erstellt: '+job['section'], Text=log).send( MailTransport() )
+			Email(To=mailto, Subject='Backup erstellt: '+job['section'], Text=log).send( MailTransport() )
 		else:
 			print '\tBackup found. Skipping.'
 	else:
