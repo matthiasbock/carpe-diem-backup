@@ -42,7 +42,7 @@ if not os.path.exists(conf):
 
 parser = RawConfigParser()
 parser.read(conf)
-mailto = parser.read('logs', 'mailto')
+mailto = parser.get('logs', 'mailto')
 
 sections = parser.sections()
 BackupJobs = []
