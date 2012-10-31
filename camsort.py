@@ -2,71 +2,52 @@
 # -*- coding: iso-8859-15 -*-
 
 import sys, os
-from datetime import date
-from shutil import move
-debug = False
+home = sys.argv[1]
+os.chdir(home)
 
+def make_mjpeg(files, moviename):
+	from subprocess import Popen
+	from shlex import split
+	from shutil import move
+	print str(len(files))+' jpegs'
+	os.mkdir('tmp')
+	for file in files:
+		move(file, 'tmp/')
+	os.chdir('tmp')
+	Popen(split('mencoder mf://*.jpg -mf fps=1:type=jpg -ovc copy -oac copy -o ../'+moviename)).wait()
+	os.chdir('..')
+	if os.path.exists(moviename) and os.path.getsize(moviename) > 0:
+		for file in files:
+			os.remove('tmp/'+file)
+		os.rmdir('tmp')
 
-# sort file by date
+jpegs = []
+threshold = 10 # sec
+last_timestamp = 0
 
-today = date.today().strftime('%Y%m%d')
-home = '/media/Thecus/IPCam'
+def cut():
+	if len(jpegs) > 0:
+		_file = jpegs[0].replace('s','')
+		year = _file[5:9]
+		month = _file[9:11]
+		day = _file[11:13]
+		hour = _file[13:15]
+		min = _file[15:17]
+		sec = _file[17:19]
+		make_mjpeg(jpegs, year+'-'+month+'-'+day+'_'+hour+'-'+min+'-'+sec+'.mjpg')
 
-files = os.listdir(home)
+for file in sorted(os.listdir(home)):
+	if file[:5] == 'ipcam' and file[-4:].lower() == '.jpg':
+		timestamp = int(file.replace('s','')[5:19])
+		if timestamp - last_timestamp > threshold:
+			cut()
+			jpegs = []
 
-def sort_into_folder(today):
-	global debug
+#		timestamp = file[5:13] # date
+#		if last_timestamp != timestamp:
+#			cut()
+#			jpegs = []
 
-	datedir = os.path.join(home, today[:4]+'-'+today[4:6]+'-'+today[6:8])
-
-	if not os.path.exists(datedir):
-		os.mkdir(datedir)
-
-	for f in files:
-		if f.find('ipcam'+today) == 0 and f[-4:] in ['.jpg', '.JPG']:
-			new = os.path.join(datedir, f)
-			if debug:
-				print f+' -> '+new
-			move(os.path.join(home, f), new)
-
-if len(sys.argv) < 2:
-	sort_into_folder(today)
-else:
-	for arg in sys.argv[1:]:
-		sort_into_folder(arg)
-
-
-# sort events with different timestamps
-
-def separate_events(today):
-	global debug
-
-	datedir = os.path.join(home, today[:4]+'-'+today[4:6]+'-'+today[6:8])
-	files = sorted(os.listdir(datedir))
-
-	lasttimestamp = 0
-	trigger = 2000
-
-	for f in files:
-		if f.find('ipcam'+today) == 0 and f[-4:] in ['.jpg', '.JPG']:
-			timestamp = f[13:-4]
-			if int(timestamp) - int(lasttimestamp) > trigger:
-				subdir = os.path.join(datedir, timestamp[:2]+':'+timestamp[2:4]+':'+timestamp[4:6])
-				if not os.path.exists(subdir):
-					os.mkdir(subdir)
-			lasttimestamp = timestamp
-
-			new = os.path.join(subdir, f)
-			if debug:
-				print f+' -> '+new
-			move(os.path.join(datedir, f), new)
-
-if len(sys.argv) < 2:
-	separate_events(today)
-else:
-	for arg in sys.argv[1:]:
-		separate_events(arg)
-
-
-# make a video ...
-
+		jpegs.append(file)
+		last_timestamp = timestamp
+cut()
