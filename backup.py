@@ -53,7 +53,8 @@ for section in sections:
 			d[key] = parser.get(section, key).replace('{{today}}', today).rstrip('/')
 		except NoOptionError:
 			pass
-	BackupJobs.append(d)
+	if section != 'logs':
+		BackupJobs.append(d)
 
 # for every Backup Job in the config file:
 
