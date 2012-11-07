@@ -29,8 +29,7 @@ def backup_present(target):
 	checks = [os.path.exists(test) for test in [target, target+'.tar.bz', target+'.tar.gz', target+'.7z', target+'.zip']]
 	return True in checks
 
-# read config file
-
+# setup
 conf = 'backup.conf'
 today = datetime.today().strftime('%Y-%m-%d')
 print 'Today is'
@@ -40,10 +39,12 @@ if not os.path.exists(conf):
 	print 'Error: '+conf+' not found'
 	sys.exit(1)
 
+# config
 parser = RawConfigParser()
 parser.read(conf)
 mailto = parser.get('logs', 'mailto')
 
+# parse config
 sections = parser.sections()
 BackupJobs = []
 for section in sections:
@@ -57,29 +58,27 @@ for section in sections:
 		BackupJobs.append(d)
 
 # for every Backup Job in the config file:
-
 for job in BackupJobs:
 	print 'Creating backup of '+job['source']+' ...'
 	start = datetime.now()
 
-	# mount source and target drives
-
+	# mount
 	print '\tmounting '+job['mount_source']+' and '+job['mount_target']+' ...'
 	if mount_if_necessary( job['mount_source'] ) and mount_if_necessary( job['mount_target'] ):
 		if not backup_present( job['target'] ):
 
 			#
-			# copy part
+			# Backup
 			#
 
+			# mkdir (s)
 			log = ''
 			t = job['target'].split('/')
 			parent = '/'.join(t[:len(t)-1])
 			print '\tchecking for target\'s parent folder '+parent+' ...'
 			Popen(split('mkdir -p '+parent)).wait()
 
-			# copy data
-
+			# copy
 			cmd = 'cp -a "'+job['source']+'" "'+job['target']+'"'
 			print '\t'+cmd
 			Popen(split(cmd), stdout=PIPE, stderr=PIPE).wait()
@@ -87,19 +86,32 @@ for job in BackupJobs:
 			sleep(10) # give it some time to complete the network transfer!
 
 			# unmount source
-
 			umount_if_necessary( job['mount_source'] )
 			print '\tsource unmounted.'
 
+			# error ?
 			bsize = du(job['target'])
 			if bsize == 0:
 				print 'Something went wrong. The backup is empty ...'
+
+				# Runtime
+				stop = datetime.now()
+				runtime = str(stop-start)
+				log += 'Runtime: '+runtime+'\n'
+
+				# Email
+				Email(To=mailto, Subject='Backup fehlgeschlagen: '+job['section'], Text=log).send( MailTransport() )
+
+				# unmount target
+				umount_if_necessary( job['mount_target'] )
+				print '\ttarget unmounted.'
+
 				continue
 			backupsize = str(bsize)+' '+job['target']
 			print '\t\t'+backupsize
 
 			#
-			# compression part
+			# Compression
 			#
 
 			compressedsize = backupsize
@@ -122,29 +134,29 @@ for job in BackupJobs:
 					print 'Warning: Skipping unsupported compression method "'+job['compress']+'"'
 
 			# unmount target
-
 			umount_if_necessary( job['mount_target'] )
 			print '\ttarget unmounted.'
 
 			#
-			# encryption part
+			# Encryption
 			#
 
 			if 'encryption' in job.keys():
 				filename = encrypt(filename, recipient = job['encryption'])
 
-			# send a mail to the admin
-
+			# Backup size
 			log += 'Backup size: '+str(backupsize)+'\n'
 			if compressedsize != backupsize:
 				log += 'Compressed using: '+job['compression']+'\n'
 				log += 'Compressed size: '+str(compressedsize)+'\n'
 
+			# Runtime
 			stop = datetime.now()
 			runtime = str(stop-start)
 			print 'Script runtime: '+runtime
 			log += 'Runtime: '+runtime+'\n'
 
+			# Email
 			Email(To=mailto, Subject='Backup erstellt: '+job['section'], Text=log).send( MailTransport() )
 		else:
 			print '\tBackup found. Skipping.'
