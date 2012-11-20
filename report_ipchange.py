@@ -22,6 +22,7 @@ if ip != expected_ip:
 
 	# notify admins about the change
 	from mailer import MailTransport, Email
-	Email(To=parser.get('expected', 'mailto'), Subject='IP-Adresse hat sich unerwartet geaendert', Text='Neue IP-Adresse: '+ip+'\nErwartet war: '+expected_ip).send(MailTransport())
+	Email(To=parser.get('expected', 'mailto'), Subject='Warnung: IP-Adresse  hat sich geaendert: '+parser.get('expected','name'), Text='Aktuelle IP-Adresse: '+ip+'\nErwartet wurde: '+expected_ip).send(MailTransport())
 else:
 	print 'ok'
+
