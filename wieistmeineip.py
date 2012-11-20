@@ -12,3 +12,6 @@ def External_IP():
 		ip = between(r.Page, '<h1 class="ip">', '</h1>')
 	return ip
 
+if __name__=='__main__':
+	print External_IP()
+

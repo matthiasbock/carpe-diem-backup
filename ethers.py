@@ -45,8 +45,8 @@ ethers = open('/etc/ethers').read()
 for line in ethers.split('\n'):
 	if len(line) > 6*2+5+1 and '\t' in line:
 		s = line.split('\t')
-		ether = s[0]
-		smbname = s[1]
+		ether = s[0].strip()
+		smbname = ' '.join(s[1:])
 		ip = ether2ip(ether)
 		if ip is not None:
 			update_hosts(ip, smbname)
