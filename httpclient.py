@@ -1,10 +1,12 @@
 #!/usr/bin/python
 # -*- coding: iso-8859-15 -*-
 
-import httplib, signal
-
+import httplib
 from urlparser import splitURL, HTTP, HTTPS
 from htmlparser import HTML, Form
+from datetime import datetime
+import socket
+import sys
 
 GET	= "GET"
 POST	= "POST"
@@ -23,7 +25,7 @@ def decode(page):
 				page = page[:i]
 	return page
 
-class Robot:
+class HttpClient:
 	def __init__(self, debug=False):								# defaults
 		self.Connection = None
 		self.ConnectionTimeout = 3 # seconds
@@ -46,10 +48,6 @@ class Robot:
 		if self.print_debug:
 			print msg
 
-	def connection_timeout(self, signum, frame):
-		self.debug("Connection timed out.")
-		self.disconnect()
-
 	def connect(self):										# connect to remote host
 		self.HaveReferer = False
 		self.debug("Connecting to "+self.Host+" ...")
@@ -57,10 +55,9 @@ class Robot:
 			self.Connection = httplib.HTTPConnection( self.Host )
 		elif self.Protocol == HTTPS:
 			self.Connection = httplib.HTTPSConnection( self.Host )				# Warning: All certificates are accepted !
+		self.last_request = datetime.now()
 
 	def request(self, Method, URL, Variables={}, AdditionalHeaders={}, SendReferer=None, SendCookies=None, FollowRedirects=True):		# returns response.status code
-
-		signal.alarm(0)		# disable the connection timeout alarm
 
 		Method = Method.upper()											# check Method
 		if not Method in [GET,POST]:
@@ -82,16 +79,27 @@ class Robot:
 			self.Protocol = Protocol
 			self.Host = Host
 			self.Site = "/"
-			self.connect()			# connect !
+			self.connect()
+
+#		delta = (datetime.now() - self.last_request).seconds
+#		if delta > self.ConnectionTimeout:
+#			self.debug("Connection timed out "+str(delta)+" seconds ago.")
+#			self.disconnect()
+#			self.connect()
 
 		additional_headers = {"Host":self.Host, "User-Agent":self.Agent, "Accept-Encoding":"identity", "Connection":"keep-alive"}
 			# at least Accept-Encoding:identity is added by httplib anyway, but is nevertheless shown here for completeness
-		additional_headers.update(AdditionalHeaders)
 		if SendReferer is None:
 			SendReferer = self.SendReferer								# send a referer ?
 		if SendReferer and self.HaveReferer:
 			additional_headers["Referer"] = self.Protocol+self.Host+self.Site
-		else:
+		additional_headers.update(AdditionalHeaders)
+		if 'Referer' in additional_headers.keys():
+			if SendReferer:
+				self.debug("\tReferer: "+additional_headers["Referer"])
+			else:
+				del additional_headers["Referer"]
+		if not 'Referer' in additional_headers.keys():
 			self.debug("\tNo referer.")
 		self.HaveReferer = True
 
@@ -114,13 +122,30 @@ class Robot:
 			additional_headers["Content-Type"] = "application/x-www-form-urlencoded"
 
 		self.debug("\tRequest: "+Method+" "+Site+" "+Parameters+" "+str(additional_headers)+'"')		# HTTP REQUEST
-		self.Connection.request(Method, Site, Parameters, additional_headers)
+		try:
+			self.Connection.request(Method, Site, Parameters, additional_headers)
+		except socket.error:
+			errno, errstr = sys.exc_info()[:2]
+			if errno == 110:
+				self.debug("socket.error: [Errno 110] Connection timed out. Reconnecting ...")
+				self.disconnect()
+				self.connect()
+				self.Connection.request(Method, Site, Parameters, additional_headers)
+			elif errno == -2:
+				self.debug("Exception. Probably host name could not be resolved.")
+				raise
+			else:
+				self.debug("Uncaught socket error")
+				raise
+		self.last_request = datetime.now()
 #		try:
 		response = self.Connection.getresponse()
 #		except httplib.BadStatusLine:
 #			self.connect()
 		self.debug("\t"+str(response.status)+" "+response.reason)
-		self.Headers = response.getheaders()
+		self.Headers = {}
+		for Tuple in response.getheaders():
+			self.Headers[Tuple[0]] = Tuple[1]
 		self.Page = HTML(decode(response.read()))  # remember: you must read every response in order to be ready to receive the next one!
 		if self.AutoSave:
 			self.savepage()
@@ -154,9 +179,6 @@ class Robot:
 						self.Cookies[ key ] = value
 						self.debug("\tCookie received: "+key+" = "+value)
 
-			# Set the signal handler and a timeout alarm
-			signal.signal(signal.SIGALRM, self.connection_timeout)
-			signal.alarm(self.ConnectionTimeout)
 			return response.status
 
 		elif response.status in [301, 302]: # Redirects: 301 Moved Permanently, 302 Found
@@ -174,8 +196,8 @@ class Robot:
 		else:	# not 200 OK or 302 Redirect
 			return response.status
 
-	def GET(self, URL):
-		return self.request(GET, URL)
+	def GET(self, URL, Variables={}, AdditionalHeaders={}):
+		return self.request(GET, URL, Variables, AdditionalHeaders)
 
 	def POST(self, URL, Variables={}, AdditionalHeaders={}):
 		return self.request(POST, URL, Variables, AdditionalHeaders)

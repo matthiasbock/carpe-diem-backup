@@ -1,11 +1,11 @@
 #!/usr/bin/python
 # -*- coding: iso-8859-15 -*-
 
-from robot import Robot
+from httpclient import HttpClient
 
 class Strato:
 	def __init__(self):
-		self.r = Robot(debug=True)
+		self.r = HttpClient(debug=True)
 
 	def login(self, username, password):
 		self.r.GET('https://www.strato.de/apps/CustomerService')
