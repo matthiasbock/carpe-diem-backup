@@ -14,6 +14,7 @@ from compression import *
 from encryption import *
 from mailer import MailTransport, Email
 from mount import mount, umount
+from wieistmeineip import External_IP
 
 def mount_if_necessary(folder):
 	if folder.strip() != '':
@@ -72,7 +73,7 @@ for job in BackupJobs:
 			#
 
 			# mkdir (s)
-			log = ''
+			log = 'External IP: '+External_IP()+'\n'
 			t = job['target'].split('/')
 			parent = '/'.join(t[:len(t)-1])
 			print '\tchecking for target\'s parent folder '+parent+' ...'
@@ -97,7 +98,7 @@ for job in BackupJobs:
 				# Runtime
 				stop = datetime.now()
 				runtime = str(stop-start)
-				log += 'Runtime: '+runtime+'\n'
+				log += 'Runtime: '+runtime+'\nBackup size: 0 Byte\n'
 
 				# Email
 				Email(To=mailto, Subject='Backup fehlgeschlagen: '+job['section'], Text=log).send( MailTransport() )
