@@ -1,5 +1,6 @@
 *.pyc
 backup.conf
+expire.conf
 mailer.conf
 strato.conf
 report_ipchange.conf
