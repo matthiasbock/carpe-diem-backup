@@ -4,10 +4,6 @@
 import os
 import sys
 
-sys.exit()
-
-
-
 from ConfigParser import RawConfigParser
 from subprocess import Popen
 from shlex import split
