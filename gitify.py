@@ -21,8 +21,7 @@ print dirs
 
 def run(cmd):
 	print '$ '+cmd
-#	return Popen(split(cmd)).wait()
-	return 0
+	return Popen(split(cmd)).wait()
 
 # extract compressed archive
 def extract(fname):
@@ -70,7 +69,6 @@ def commit(repodir, comment):
 
 # move content to git folder
 gitrepo = "git/"
-commit(gitrepo, 'gitify starts')
 for dir in dirs:
 	print 'committing the content files and folders in '+dir+' into '+gitrepo+' ...'
 	rsync(dir, gitrepo)
