@@ -1,37 +1,78 @@
 #!/usr/bin/python
 
-import os
+#
+# takes a list of folders
+# rsync'es their respective contents with current folder's subfolder "git/"
+# commits the git repository in "git/"
+# removes the remaining empty directory
+#
+
+import sys, os
 from subprocess import Popen
 from shlex import split
 
-# find folders named after dates
-dirs = []
-for dir in sorted(os.listdir('.')):
-	if os.path.isdir(dir) and len(dir) == 10 and dir.count('-') == 2: # e.g. 2013-05-06
-		dirs.append(dir)
+dirs = sys.argv[1:]
+if len(dirs) == 0:
+	for dir in sorted(os.listdir('.')):
+		if os.path.isdir(dir) and len(dir) == 10 and dir.count('-') == 2: # e.g. 2013-05-06
+		#if "Daten Carpe" in dir:
+			dirs.append(dir)
+print dirs
 
 def run(cmd):
 	print '$ '+cmd
-	Popen(split(cmd)).wait()
+#	return Popen(split(cmd)).wait()
+	return 0
+
+# extract compressed archive
+def extract(fname):
+	pwd = os.getcwd()
+	dn = os.path.dirname(fname)
+	print '$ cd '+dn
+	os.chdir(dn)
+	fname = os.path.basename(fname)
+	if fname[-3:] == '.7z':
+		exitcode = run('7za x "'+fname+'"')
+	elif fname[-7:] == '.tar.bz':
+		exitcode = run('tar -vxjf "'+fname+'"')
+	if exitcode == 0:
+		run('rm "'+fname+'"')
+	print '$ cd '+pwd
+	os.chdir(pwd)
 
 def rsync(src, dst):
-	for sub in os.listdir(src):
-		subsrc = os.path.join(dir, sub)
-		run('rsync -vr --remove-source-files --delete "'+subsrc+'" "'+dst+'"')
-		run('rm -R "'+subsrc+'"')
+	# rsync content files and folder in src/ into dst/
+	for content in os.listdir(src):
+		content_path = os.path.join(src, content)
+
+		# if 7z or tar.bz archive, extract first
+		if content[-3:] == '.7z':
+			extract(content_path)
+			content_path = content_path[:-3]
+		elif content[-7:] == '.tar.bz':
+			extract(content_path)
+			content_path = content_path[:-7]
+
+		# rsync
+		run('rsync -vr --remove-source-files --delete "'+content_path+'" "'+dst+'"')
+		# remove empty folders (rsync wont' do that for us)
+		run('find "'+content_path+'" -type d -empty -prune -exec rmdir --ignore-fail-on-non-empty -p {} \;')
+	run('find "'+src+'" -type d -empty -prune -exec rmdir --ignore-fail-on-non-empty -p {} \;')
 
 def commit(repodir, comment):
 	print '$ cd '+repodir
 	path = os.getcwd()
 	os.chdir(repodir)
 	run('git add .')
-	run('git commit -am "'+comment+'"')
+	run('git commit -m "'+comment+'"')
 	print '$ cd '+path
 	os.chdir(path)
 
 # move content to git folder
+gitrepo = "git/"
+commit(gitrepo, 'gitify starts')
 for dir in dirs:
-	print 'syncing '+dir+' ...'
-	rsync(dir, 'git/')
-	commit('git/', dir)
+	print 'committing the content files and folders in '+dir+' into '+gitrepo+' ...'
+	rsync(dir, gitrepo)
+	commit(gitrepo, dir)
 	print ''
