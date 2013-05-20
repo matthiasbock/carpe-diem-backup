@@ -7,6 +7,8 @@
 # removes the remaining empty directory
 #
 
+dry_run = False
+
 import sys, os
 from subprocess import Popen
 from shlex import split
@@ -21,7 +23,10 @@ print dirs
 
 def run(cmd):
 	print '$ '+cmd
-	return Popen(split(cmd)).wait()
+	if dry_run:
+		return 0
+	else:
+		return Popen(split(cmd)).wait()
 
 # extract compressed archive
 def extract(fname):
@@ -33,7 +38,7 @@ def extract(fname):
 	if fname[-3:] == '.7z':
 		exitcode = run('7za x "'+fname+'"')
 	elif fname[-7:] == '.tar.bz':
-		exitcode = run('tar -vxjf "'+fname+'"')
+		exitcode = run('tar --no-same-owner -vxjf "'+fname+'"')
 	if exitcode == 0:
 		run('rm "'+fname+'"')
 	print '$ cd '+pwd
@@ -55,15 +60,15 @@ def rsync(src, dst):
 		# rsync
 		run('rsync -vr --remove-source-files --delete "'+content_path+'" "'+dst+'"')
 		# remove empty folders (rsync wont' do that for us)
-		run('find "'+content_path+'" -type d -empty -prune -exec rmdir --ignore-fail-on-non-empty -p {} \;')
-	run('find "'+src+'" -type d -empty -prune -exec rmdir --ignore-fail-on-non-empty -p {} \;')
+		run('find "'+content_path+'/" -type d -exec rmdir -p "{}" \;')
+	run('rmdir "'+src+'"')
 
 def commit(repodir, comment):
 	print '$ cd '+repodir
 	path = os.getcwd()
 	os.chdir(repodir)
 	run('git add .')
-	run('git commit -m "'+comment+'"')
+	run('git commit -am "'+comment+'"')
 	print '$ cd '+path
 	os.chdir(path)
 
