@@ -34,12 +34,15 @@ class Email:
 		msg['From'] = Transport.From
 		msg['To'] = self.To
 
-		connection = SMTP( Transport.Host, Transport.Port, Transport.LocalIP )
-		connection.set_debuglevel( 1 )
-		connection.ehlo( Transport.LocalIP )
-		connection.starttls()
-		connection.ehlo( Transport.LocalIP )
-		connection.login( Transport.User, Transport.Password )
-		connection.sendmail( Transport.From, [self.To], msg.as_string() )
-		connection.quit()
+		try:
+			connection = SMTP( Transport.Host, Transport.Port, Transport.LocalIP )
+			connection.set_debuglevel( 1 )
+			connection.ehlo( Transport.LocalIP )
+			connection.starttls()
+			connection.ehlo( Transport.LocalIP )
+			connection.login( Transport.User, Transport.Password )
+			connection.sendmail( Transport.From, [self.To], msg.as_string() )
+			connection.quit()
+		except:
+			pass
 
