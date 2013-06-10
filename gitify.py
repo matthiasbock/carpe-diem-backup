@@ -58,7 +58,7 @@ def rsync(src, dst):
 			content_path = content_path[:-7]
 
 		# rsync
-		run('rsync -vr --remove-source-files --delete "'+content_path+'" "'+dst+'"')
+		run('rsync -ar --remove-source-files --delete -i "'+content_path+'" "'+dst+'"')
 		# remove empty folders (rsync wont' do that for us)
 		run('find "'+content_path+'/" -type d -exec rmdir -p "{}" \;')
 	run('rmdir "'+src+'"')
@@ -77,5 +77,5 @@ gitrepo = "git/"
 for dir in dirs:
 	print 'committing the content files and folders in '+dir+' into '+gitrepo+' ...'
 	rsync(dir, gitrepo)
-	commit(gitrepo, dir)
+	commit(gitrepo, "gitify "+dir)
 	print ''
