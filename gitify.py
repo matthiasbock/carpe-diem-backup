@@ -60,8 +60,8 @@ def rsync(src, dst):
 		# rsync
 		run('rsync -ar --remove-source-files --delete -i "'+content_path+'" "'+dst+'"')
 		# remove empty folders (rsync wont' do that for us)
-		run('find "'+content_path+'/" -type d -exec rmdir -p "{}" \;')
-	run('rmdir "'+src+'"')
+		run('find "'+content_path+'/" -type d -exec rmdir -p --ignore-fail-on-non-empty "{}" \;')
+	run('rmdir --ignore-fail-on-non-empty "'+src+'"')
 
 def commit(repodir, comment):
 	print '$ cd '+repodir
@@ -79,3 +79,4 @@ for dir in dirs:
 	rsync(dir, gitrepo)
 	commit(gitrepo, "gitify "+dir)
 	print ''
+
