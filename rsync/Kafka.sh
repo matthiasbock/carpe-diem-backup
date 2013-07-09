@@ -32,4 +32,4 @@ rsync -ar --delete -i /home/mysql . >> rsync.log
 rsync -ar --delete -i /home/www/intern . >> rsync.log
 
 git add .
-git commit -am "$date: $(echo -n $(cat /etc/hostname)) rsync'ed dovecot, etc, mysql and intern"
+git commit -am "$date: $(echo -n $(cat /etc/hostname)) rsync'ed Kafka: dovecot, etc, mysql and intern"
