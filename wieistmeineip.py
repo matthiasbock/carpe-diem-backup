@@ -7,9 +7,7 @@ from htmlparser import between
 def External_IP():
 	r = HttpClient()
 	r.GET("http://www.wieistmeineip.de/")
-	ip = between(r.Page, 'CopyToClipboard(\'', '\'')
-	if ip == '':
-		ip = between(r.Page, '<h1 class="ip">', '</h1>')
+	ip = between(r.Page, '<strong>', '</strong>')
 	return ip
 
 if __name__=='__main__':
